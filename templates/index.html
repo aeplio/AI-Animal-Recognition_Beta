@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI动物识别系统Beta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-form {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .progress-bar {
+            background-color: #e0e0e0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress {
+            background-color: #4CAF50;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        #image-preview {
+            max-width: 100%;
+            margin: 20px auto;
+            text-align: center;
+        }
+        #preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI动物识别系统beta</h1>
+        <div class="upload-form">
+            <input type="file" id="file-input" class="file-input" accept="image/*" onchange="previewImage(this)">
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">选择图片</button>
+            <button class="upload-btn" onclick="uploadImage()">开始识别</button>
+        </div>
+        <div id="image-preview">
+            <img id="preview-image" alt="预览图片">
+        </div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('preview-image');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'inline-block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function uploadImage() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('请先选择图片');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                displayResults(data.predictions);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('上传失败，请重试');
+            });
+        }
+
+        function displayResults(predictions) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!predictions || predictions.length === 0) {
+                resultsDiv.innerHTML = '<h2>内容无法识别</h2>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<h2>识别结果：</h2>';
+
+            predictions.forEach(pred => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                
+                const label = document.createElement('div');
+                label.textContent = pred.category;
+                
+                const probabilityContainer = document.createElement('div');
+                probabilityContainer.style.width = '60%';
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                
+                const progress = document.createElement('div');
+                progress.className = 'progress';
+                progress.style.width = pred.probability + '%';
+                
+                const percentage = document.createElement('div');
+                percentage.textContent = pred.probability.toFixed(2) + '%';
+                
+                progressBar.appendChild(progress);
+                probabilityContainer.appendChild(progressBar);
+                probabilityContainer.appendChild(percentage);
+                
+                resultItem.appendChild(label);
+                resultItem.appendChild(probabilityContainer);
+                
+                resultsDiv.appendChild(resultItem);
+            });
+        }
+    </script>
+</body>
+</html>
